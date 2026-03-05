@@ -1,0 +1,28 @@
+Table plantas {
+  id_planta int [pk, increment]
+  nome text [not null] 
+  nome_cientifico text
+  colheita int
+  necessidade_agua text
+  notas_cultivo text
+}
+
+Table setores {
+  id_setor int [pk, increment]
+  nome_setor text [not null]
+  id_planta int
+  data_plantio date
+  ativo bolleon
+}
+
+Table dispositivo {
+  id_dispositivo int [pk, increment]
+  id_setor int
+  tipo text [not null, note: "sensor de umidade, bomba agua"]
+  pino_conexao text [note: "pino do microcontrolador"]
+  status_online bollean [default: true]
+}
+
+Table leituras_sensores {
+  
+}
