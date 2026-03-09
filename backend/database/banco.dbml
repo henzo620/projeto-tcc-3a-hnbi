@@ -1,28 +1,75 @@
-Table plantas {
-  id_planta int [pk, increment]
-  nome text [not null] 
-  nome_cientifico text
-  colheita int
-  necessidade_agua text
-  notas_cultivo text
+Table catalogo_plantas {
+  id integer [pk, increment]
+  nome_popular text [not null]
+  umidade_ideal real [not null]
+  incidencia_solar_ideal real [not null]
+  dicas_cuidado text
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Dados pré-carregados para que o usuário comum não precise saber números técnicos'
 }
 
-Table setores {
-  id_setor int [pk, increment]
-  nome_setor text [not null]
-  id_planta int
-  data_plantio date
-  ativo bolleon
+Table dispositivos {
+  id integer [pk, increment]
+  nome text [not null]
+  endereco_mac text [unique, not null]
+  localizacao text
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'O hardware (controlador) instalado na casa do usuário'
 }
 
-Table dispositivo {
-  id_dispositivo int [pk, increment]
-  id_setor int
-  tipo text [not null, note: "sensor de umidade, bomba agua"]
-  pino_conexao text [note: "pino do microcontrolador"]
-  status_online bollean [default: true]
+
+
+Table meus_cultivos {
+  id integer [pk, increment]
+  apelido text [not null]
+  planta_id integer [not null]
+  dispositivo_id integer [not null]
+  status_saude text [default: 'OK']
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'A planta real do usuário vinculada a um dispositivo e ao catálogo'
 }
 
-Table leituras_sensores {
-  
+
+
+Table leituras_sensor {
+  id integer [pk, increment]
+  cultivo_id integer [not null]
+  valor_umidade real [not null]
+  valor_incidencia_solar real [not null]
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (cultivo_id, created_at) [name: 'idx_historico_grafico']
+  }
+
 }
+
+Table logs_irrigacao {
+  id integer [pk, increment]
+  cultivo_id integer [not null]
+  duracao_segundos integer [not null]
+  origem text [default: 'AUTO']
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (cultivo_id, created_at) [name: 'idx_historico_rega']
+  }
+
+}
+
+
+
+Ref: meus_cultivos.planta_id > catalogo_plantas.id
+Ref: meus_cultivos.dispositivo_id > dispositivos.id [delete: cascade]
+Ref: leituras_sensor.cultivo_id > meus_cultivos.id [delete: cascade]
+Ref: logs_irrigacao.cultivo_id > meus_cultivos.id [delete: cascade]
+
+Ref: "leituras_sensor"."cultivo_id" < "leituras_sensor"."valor_umidade"
