@@ -1,75 +1,96 @@
-Table catalogo_plantas {
+Table users {
   id integer [pk, increment]
-  nome_popular text [not null]
-  umidade_ideal real [not null]
-  incidencia_solar_ideal real [not null]
-  dicas_cuidado text
-  created_at text [not null, default: `CURRENT_TIMESTAMP`]
-  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
-
-  Note: 'Dados pré-carregados para que o usuário comum não precise saber números técnicos'
-}
-
-Table dispositivos {
-  id integer [pk, increment]
-  nome text [not null]
-  endereco_mac text [unique, not null]
-  localizacao text
-  created_at text [not null, default: `CURRENT_TIMESTAMP`]
-  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
-
-  Note: 'O hardware (controlador) instalado na casa do usuário'
-}
-
-
-
-Table meus_cultivos {
-  id integer [pk, increment]
-  apelido text [not null]
-  planta_id integer [not null]
-  dispositivo_id integer [not null]
-  status_saude text [default: 'OK']
-  created_at text [not null, default: `CURRENT_TIMESTAMP`]
-  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
-
-  Note: 'A planta real do usuário vinculada a um dispositivo e ao catálogo'
-}
-
-
-
-Table leituras_sensor {
-  id integer [pk, increment]
-  cultivo_id integer [not null]
-  valor_umidade real [not null]
-  valor_incidencia_solar real [not null]
+  name text [not null]
+  email text [unique, not null]
+  password_hash text [not null]
   created_at text [not null, default: `CURRENT_TIMESTAMP`]
   updated_at text [not null, default: `CURRENT_TIMESTAMP`]
 
   indexes {
-    (cultivo_id, created_at) [name: 'idx_historico_grafico']
+    email [name: 'idx_users_email']
   }
-
 }
 
-Table logs_irrigacao {
+Table plant_catalog {
   id integer [pk, increment]
-  cultivo_id integer [not null]
-  duracao_segundos integer [not null]
-  origem text [default: 'AUTO']
+  popular_name text [not null]
+  ideal_humidity real [not null]
+  ideal_ph_min real [not null]
+  ideal_ph_max real [not null]
+  care_tips text
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Pre-loaded data so users do not need to know technical numbers. pH range varies per plant (e.g. lettuce 6.0-7.0, strawberry 5.5-6.5)'
+}
+
+Table devices {
+  id integer [pk, increment]
+  user_id integer [not null]
+  name text [not null]
+  location text
   created_at text [not null, default: `CURRENT_TIMESTAMP`]
   updated_at text [not null, default: `CURRENT_TIMESTAMP`]
 
   indexes {
-    (cultivo_id, created_at) [name: 'idx_historico_rega']
+    user_id [name: 'idx_devices_user_id']
   }
 
+  Note: 'Physical hardware delivered to the customer. MAC address is managed internally by firmware'
 }
 
+Table my_crops {
+  id integer [pk, increment]
+  user_id integer [not null]
+  plant_id integer [not null]
+  device_id integer [not null]
+  nickname text [not null]
+  health_status text [not null, default: 'OK']
+  last_watered_at text
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
 
+  indexes {
+    user_id [name: 'idx_crops_user_id']
+    plant_id [name: 'idx_crops_plant_id']
+    device_id [name: 'idx_crops_device_id']
+  }
 
-Ref: meus_cultivos.planta_id > catalogo_plantas.id
-Ref: meus_cultivos.dispositivo_id > dispositivos.id [delete: cascade]
-Ref: leituras_sensor.cultivo_id > meus_cultivos.id [delete: cascade]
-Ref: logs_irrigacao.cultivo_id > meus_cultivos.id [delete: cascade]
+  Note: 'CHECK health_status IN (OK, ALERT). ALERT automatically triggers irrigation.'
+}
 
-Ref: "leituras_sensor"."cultivo_id" < "leituras_sensor"."valor_umidade"
+Table sensor_readings {
+  id integer [pk, increment]
+  crop_id integer [not null]
+  humidity_value real [not null]
+  ph_value real [not null]
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (crop_id, created_at) [name: 'idx_sensor_crop_history']
+  }
+
+  Note: 'pH scale: 0.0 to 14.0. Ideal range is defined per plant in plant_catalog'
+}
+
+Table irrigation_logs {
+  id integer [pk, increment]
+  crop_id integer [not null]
+  origin text [not null, default: 'AUTO']
+  created_at text [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (crop_id, created_at) [name: 'idx_irrigation_crop_history']
+  }
+
+  Note: 'CHECK origin IN (AUTO, MANUAL)'
+}
+
+Ref: devices.user_id > users.id [delete: cascade]
+Ref: my_crops.user_id > users.id [delete: cascade]
+Ref: my_crops.plant_id > plant_catalog.id
+Ref: my_crops.device_id > devices.id [delete: cascade]
+Ref: sensor_readings.crop_id > my_crops.id [delete: cascade]
+Ref: irrigation_logs.crop_id > my_crops.id [delete: cascade]
