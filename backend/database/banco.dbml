@@ -17,33 +17,20 @@ Table plant_catalog {
   ideal_humidity real [not null]
   ideal_ph_min real [not null]
   ideal_ph_max real [not null]
+  ideal_salinity_min real [not null]
+  ideal_salinity_max real [not null]
   care_tips text
   created_at text [not null, default: `CURRENT_TIMESTAMP`]
   updated_at text [not null, default: `CURRENT_TIMESTAMP`]
 
-  Note: 'Pre-loaded data so users do not need to know technical numbers. pH range varies per plant (e.g. lettuce 6.0-7.0, strawberry 5.5-6.5)'
-}
-
-Table devices {
-  id integer [pk, increment]
-  user_id integer [not null]
-  name text [not null]
-  location text
-  created_at text [not null, default: `CURRENT_TIMESTAMP`]
-  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
-
-  indexes {
-    user_id [name: 'idx_devices_user_id']
-  }
-
-  Note: 'Physical hardware delivered to the customer. MAC address is managed internally by firmware'
+  Note: 'Dados pré-carregados para que os usuários não precisem conhecer números técnicos. A faixa de pH varia de acordo com a planta (por exemplo, alface 6,0–7,0; morango 5,5–6,5)'
 }
 
 Table my_crops {
   id integer [pk, increment]
   user_id integer [not null]
   plant_id integer [not null]
-  device_id integer [not null]
+  device_code text [unique, not null]
   nickname text [not null]
   health_status text [not null, default: 'OK']
   last_watered_at text
@@ -53,10 +40,10 @@ Table my_crops {
   indexes {
     user_id [name: 'idx_crops_user_id']
     plant_id [name: 'idx_crops_plant_id']
-    device_id [name: 'idx_crops_device_id']
+    device_code [name: 'idx_crops_device_code']
   }
 
-  Note: 'CHECK health_status IN (OK, ALERT). ALERT automatically triggers irrigation.'
+  Note: 'Verifique se health_status está em (OK, ALERT). ALERT aciona automaticamente a irrigação. device_code está diretamente vinculado ao Arduino físico.'
 }
 
 Table sensor_readings {
@@ -64,6 +51,9 @@ Table sensor_readings {
   crop_id integer [not null]
   humidity_value real [not null]
   ph_value real [not null]
+  salinity_value real [not null]
+  log_status text [not null, default: 'OK']
+  log_message text
   created_at text [not null, default: `CURRENT_TIMESTAMP`]
   updated_at text [not null, default: `CURRENT_TIMESTAMP`]
 
@@ -71,26 +61,9 @@ Table sensor_readings {
     (crop_id, created_at) [name: 'idx_sensor_crop_history']
   }
 
-  Note: 'pH scale: 0.0 to 14.0. Ideal range is defined per plant in plant_catalog'
+  Note: 'Verifique se **log_status** está em (OK, WARNING, ERROR). **log_message** armazena detalhes quando **log_status** não é OK.'
 }
 
-Table irrigation_logs {
-  id integer [pk, increment]
-  crop_id integer [not null]
-  origin text [not null, default: 'AUTO']
-  created_at text [not null, default: `CURRENT_TIMESTAMP`]
-  updated_at text [not null, default: `CURRENT_TIMESTAMP`]
-
-  indexes {
-    (crop_id, created_at) [name: 'idx_irrigation_crop_history']
-  }
-
-  Note: 'CHECK origin IN (AUTO, MANUAL)'
-}
-
-Ref: devices.user_id > users.id [delete: cascade]
 Ref: my_crops.user_id > users.id [delete: cascade]
 Ref: my_crops.plant_id > plant_catalog.id
-Ref: my_crops.device_id > devices.id [delete: cascade]
 Ref: sensor_readings.crop_id > my_crops.id [delete: cascade]
-Ref: irrigation_logs.crop_id > my_crops.id [delete: cascade]
